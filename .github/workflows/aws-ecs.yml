@@ -1,0 +1,69 @@
+name: Deploy to Amazon ECS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - production
+  pull_request:
+
+env:
+  AWS_REGION: ${{ MY_AWS_REGION }}
+  ECR_REPOSITORY: ${{ MY_ECR_REPOSITORY }}
+  ECS_SERVICE: ${{ MY_ECS_SERVICE }}
+  ECS_CLUSTER: ${{ MY_ECS_CLUSTER }}
+  ECS_TASK_DEFINITION: ${{ MY_ECS_TASK_DEFINITION }}
+  CONTAINER_NAME: ${{ MY_CONTAINER_NAME }}
+  DOCKER_IMAGE: ${{ MY IMAGE_NAME }}
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: npm install
+        uses: actions/checkout@v2
+        with:
+          args: install
+      - name: npm test
+        uses: actions/checkout@v2
+        with:
+          args: run test
+      - name: npm lint
+        uses: actions/checkout@v2
+        with:
+          args: run lint
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build_test]
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ env.MY IMAGE_NAME }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
