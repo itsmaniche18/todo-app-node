@@ -1,17 +1,10 @@
-name: Upwork
+name: rebase
 on:
   issue_comment:
     types: [created]
   workflow_dispatch:  
-jobs:
-  checkout:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: dev
-          token: ${{ secrets.GIT_TOKEN }}
 
+jobs:
   rebase:
     name: Rebase
     if: github.event.issue.pull_request != '' && contains(github.event.comment.body, '/rebase')
@@ -25,19 +18,4 @@ jobs:
       - name: Automatic Rebase
         uses: cirrus-actions/rebase@1.5
         env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
-
-  commit_push:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@master
-      with:
-        token: ${{ secrets.GIT_TOKEN }}
-        fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-    - name: Create local changes
-      run: |
-        ...
-    - name: Commit & Push changes
-      uses: actions-js/push@master
-      with:
-        github_token: ${{ secrets.GIT_TOKEN }}          
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}       
